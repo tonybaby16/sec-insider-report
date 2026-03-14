@@ -7,7 +7,7 @@
 set -euo pipefail
 
 # ── Edit these two values ──
-PROJECT_ID="YOUR_GCP_PROJECT_ID"
+PROJECT_ID="sec-insider-report"
 REGION="us-central1"
 # ───────────────────────────
 
