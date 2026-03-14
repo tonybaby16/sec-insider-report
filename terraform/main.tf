@@ -211,10 +211,11 @@ resource "google_secret_manager_secret" "slack_webhook" {
 }
 
 resource "google_secret_manager_secret_version" "slack_webhook_val" {
+  count = var.slack_webhook_url != "" ? 1 : 0
+
   secret      = google_secret_manager_secret.slack_webhook.id
   secret_data = var.slack_webhook_url
 
-  # Don't overwrite if already set and value is empty
   lifecycle {
     ignore_changes = [secret_data]
   }
