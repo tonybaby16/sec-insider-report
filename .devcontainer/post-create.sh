@@ -5,10 +5,6 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "  SEC Pipeline — Codespace Setup"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# ── Remove broken Yarn repo (expired GPG key in base image) ──
-rm -f /etc/apt/sources.list.d/yarn.list
-rm -f /usr/share/keyrings/yarnkey.gpg
-
 # ── System packages ──
 echo "▶ Installing system packages..."
 apt-get update -qq
@@ -38,15 +34,20 @@ ln -sf /usr/local/lib/google-cloud-sdk/bin/gsutil /usr/local/bin/gsutil
 ln -sf /usr/local/lib/google-cloud-sdk/bin/bq     /usr/local/bin/bq
 echo "✅ gcloud: $(gcloud --version | head -1)"
 
-# ── Python dependencies ──
-echo "▶ Installing Python dependencies (~2 min)..."
-pip install --upgrade pip --quiet
-pip install \
+# ── uv (fast Python package manager) ──
+echo "▶ Installing uv..."
+curl -LsSf https://astral.sh/uv/install.sh | bash > /dev/null 2>&1
+export PATH="$HOME/.cargo/bin:$PATH"
+echo "✅ uv: $(uv --version)"
+
+# ── Python dependencies via uv ──
+echo "▶ Installing Python dependencies via uv (~1 min)..."
+uv pip install --system \
   pyspark==3.5.1 \
   google-cloud-bigquery==3.20.1 \
   google-cloud-storage==2.16.0 \
   google-cloud-secret-manager==2.20.0 \
-  great-expectations==0.18.15 \
+  "great-expectations>=1.0.0,<2.0.0" \
   dbt-bigquery==1.7.7 \
   apache-airflow==2.9.1 \
   apache-airflow-providers-google==10.18.0 \
@@ -58,8 +59,7 @@ pip install \
   python-dotenv==1.0.1 \
   black==24.4.2 \
   ruff==0.4.4 \
-  pytest==8.2.2 \
-  --quiet
+  pytest==8.2.2
 echo "✅ Python dependencies installed"
 
 # ── Make scripts executable ──
@@ -69,9 +69,11 @@ chmod +x terraform/bootstrap.sh
 echo ""
 echo "▶ Tool versions:"
 echo "  Python:    $(python --version)"
+echo "  uv:        $(uv --version)"
 echo "  Terraform: $(terraform version | head -1)"
 echo "  gcloud:    $(gcloud --version | head -1)"
 echo "  Java:      $(java -version 2>&1 | head -1)"
+echo "  dbt:       $(dbt --version 2>/dev/null | grep 'installed' | awk '{print $NF}' || echo 'installed')"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  ✅ Codespace ready!"
