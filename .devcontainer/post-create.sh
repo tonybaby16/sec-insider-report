@@ -7,15 +7,11 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 
 # ── System packages ──
 echo "▶ Installing system packages..."
-apt-get update -qq
-apt-get install -y -qq \
+sudo apt-get update -qq
+sudo apt-get install -y -qq \
   default-jdk-headless \
   unzip \
   curl \
-  gnupg \
-  software-properties-common \
-  apt-transport-https \
-  ca-certificates \
   > /dev/null 2>&1
 echo "✅ System packages installed"
 
@@ -24,22 +20,22 @@ echo "▶ Installing Terraform 1.7.5..."
 TERRAFORM_VERSION="1.7.5"
 curl -sLo /tmp/terraform.zip \
   "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip"
-unzip -q /tmp/terraform.zip -d /usr/local/bin/
+sudo unzip -q /tmp/terraform.zip -d /usr/local/bin/
 rm /tmp/terraform.zip
-chmod +x /usr/local/bin/terraform
-echo "✅ Terraform installed: $(terraform version | head -1)"
+sudo chmod +x /usr/local/bin/terraform
+echo "✅ Terraform: $(terraform version | head -1)"
 
 # ── Google Cloud CLI ──
 echo "▶ Installing Google Cloud CLI..."
 curl -sSL https://sdk.cloud.google.com \
   | bash -s -- --disable-prompts --install-dir=/usr/local/lib > /dev/null 2>&1
-ln -sf /usr/local/lib/google-cloud-sdk/bin/gcloud /usr/local/bin/gcloud
-ln -sf /usr/local/lib/google-cloud-sdk/bin/gsutil /usr/local/bin/gsutil
-ln -sf /usr/local/lib/google-cloud-sdk/bin/bq     /usr/local/bin/bq
-echo "✅ gcloud installed: $(gcloud --version | head -1)"
+sudo ln -sf /usr/local/lib/google-cloud-sdk/bin/gcloud /usr/local/bin/gcloud
+sudo ln -sf /usr/local/lib/google-cloud-sdk/bin/gsutil /usr/local/bin/gsutil
+sudo ln -sf /usr/local/lib/google-cloud-sdk/bin/bq     /usr/local/bin/bq
+echo "✅ gcloud: $(gcloud --version | head -1)"
 
 # ── Python dependencies ──
-echo "▶ Installing Python dependencies (this takes ~2 min)..."
+echo "▶ Installing Python dependencies (~2 min)..."
 pip install --upgrade pip --quiet
 pip install \
   pyspark==3.5.1 \
@@ -72,7 +68,6 @@ echo "  Python:    $(python --version)"
 echo "  Terraform: $(terraform version | head -1)"
 echo "  gcloud:    $(gcloud --version | head -1)"
 echo "  Java:      $(java -version 2>&1 | head -1)"
-echo "  dbt:       $(dbt --version 2>/dev/null | grep 'installed' | awk '{print $NF}' || echo 'installed')"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  ✅ Codespace ready!"
