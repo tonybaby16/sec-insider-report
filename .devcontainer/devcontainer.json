@@ -6,10 +6,6 @@
     "ghcr.io/devcontainers/features/terraform:1": {
       "version": "1.7.5"
     },
-    "ghcr.io/devcontainers/features/google-cloud-cli:1": {
-      "version": "latest",
-      "installAdditionalComponents": true
-    },
     "ghcr.io/devcontainers/features/docker-in-docker:2": {
       "version": "latest"
     },
@@ -54,13 +50,9 @@
     "DBT_PROFILES_DIR": "${containerWorkspaceFolder}/dbt"
   },
 
-  "forwardPorts": [8080, 8501, 5432],
+  "forwardPorts": [8080, 8501],
   "portsAttributes": {
     "8080": { "label": "Airflow UI", "onAutoForward": "notify" },
     "8501": { "label": "Streamlit App", "onAutoForward": "openBrowser" }
-  },
-
-  "mounts": [
-    "source=${localEnv:HOME}/.config/gcloud,target=/home/vscode/.config/gcloud,type=bind,consistency=cached"
-  ]
+  }
 }
