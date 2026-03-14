@@ -5,6 +5,10 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "  SEC Pipeline — Codespace Setup"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+# ── Remove broken Yarn repo (expired GPG key in base image) ──
+rm -f /etc/apt/sources.list.d/yarn.list
+rm -f /usr/share/keyrings/yarnkey.gpg
+
 # ── System packages ──
 echo "▶ Installing system packages..."
 apt-get update -qq
