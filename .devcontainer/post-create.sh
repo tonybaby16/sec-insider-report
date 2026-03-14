@@ -53,10 +53,10 @@ uv pip install --system \
   google-cloud-secret-manager==2.20.0 \
   "great-expectations>=1.0.0,<2.0.0" \
   dbt-bigquery==1.7.7 \
-  apache-airflow==2.9.1 \
-  apache-airflow-providers-google==10.18.0 \
+  "apache-airflow==2.9.1" \
+  "apache-airflow-providers-google>=10.20.0" \
   streamlit==1.35.0 \
-  pandas==2.2.2 \
+  "pandas>=2.1.0,<2.3" \
   pyarrow==16.1.0 \
   plotly==5.22.0 \
   requests==2.32.3 \
