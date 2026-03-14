@@ -2,12 +2,6 @@
   "name": "SEC Insider Trading Pipeline",
   "image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
 
-  "features": {
-    "ghcr.io/devcontainers/features/terraform:1": {
-      "version": "1.7.5"
-    }
-  },
-
   "postCreateCommand": "bash .devcontainer/post-create.sh",
 
   "customizations": {
@@ -19,7 +13,6 @@
         "innoverio.vscode-dbt-power-user",
         "redhat.vscode-yaml",
         "github.actions",
-        "visualstudioexptteam.vscodeintellicode",
         "charliermarsh.ruff"
       ],
       "settings": {
@@ -27,8 +20,7 @@
         "editor.formatOnSave": true,
         "[python]": {
           "editor.defaultFormatter": "ms-python.black-formatter"
-        },
-        "terraform.languageServer.enable": true
+        }
       }
     }
   },
@@ -36,7 +28,7 @@
   "remoteEnv": {
     "PYTHONPATH": "${containerWorkspaceFolder}",
     "DBT_PROFILES_DIR": "${containerWorkspaceFolder}/dbt",
-    "PATH": "${containerEnv:PATH}:/usr/local/lib/google-cloud-sdk/bin"
+    "PATH": "${containerEnv:PATH}:/usr/local/lib/google-cloud-sdk/bin:/usr/local/bin/terraform_dir"
   },
 
   "forwardPorts": [8080, 8501],

@@ -5,10 +5,29 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "  SEC Pipeline — Codespace Setup"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# ── Java 11 (required for PySpark) ──
-echo "▶ Installing Java 11..."
-apt-get update -qq && apt-get install -y -qq default-jdk-headless > /dev/null 2>&1
-echo "✅ Java installed: $(java -version 2>&1 | head -1)"
+# ── System packages ──
+echo "▶ Installing system packages..."
+apt-get update -qq
+apt-get install -y -qq \
+  default-jdk-headless \
+  unzip \
+  curl \
+  gnupg \
+  software-properties-common \
+  apt-transport-https \
+  ca-certificates \
+  > /dev/null 2>&1
+echo "✅ System packages installed"
+
+# ── Terraform ──
+echo "▶ Installing Terraform 1.7.5..."
+TERRAFORM_VERSION="1.7.5"
+curl -sLo /tmp/terraform.zip \
+  "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip"
+unzip -q /tmp/terraform.zip -d /usr/local/bin/
+rm /tmp/terraform.zip
+chmod +x /usr/local/bin/terraform
+echo "✅ Terraform installed: $(terraform version | head -1)"
 
 # ── Google Cloud CLI ──
 echo "▶ Installing Google Cloud CLI..."
@@ -20,7 +39,7 @@ ln -sf /usr/local/lib/google-cloud-sdk/bin/bq     /usr/local/bin/bq
 echo "✅ gcloud installed: $(gcloud --version | head -1)"
 
 # ── Python dependencies ──
-echo "▶ Installing Python dependencies..."
+echo "▶ Installing Python dependencies (this takes ~2 min)..."
 pip install --upgrade pip --quiet
 pip install \
   pyspark==3.5.1 \
@@ -48,10 +67,10 @@ chmod +x terraform/bootstrap.sh
 
 # ── Summary ──
 echo ""
-echo "▶ Installed tools:"
+echo "▶ Tool versions:"
 echo "  Python:    $(python --version)"
-echo "  Terraform: $(terraform version 2>/dev/null | head -1)"
-echo "  gcloud:    $(gcloud --version 2>/dev/null | head -1)"
+echo "  Terraform: $(terraform version | head -1)"
+echo "  gcloud:    $(gcloud --version | head -1)"
 echo "  Java:      $(java -version 2>&1 | head -1)"
 echo "  dbt:       $(dbt --version 2>/dev/null | grep 'installed' | awk '{print $NF}' || echo 'installed')"
 echo ""
