@@ -1,21 +1,23 @@
 #!/usr/bin/env bash
-# ─────────────────────────────────────────────────────────────────────
-# .devcontainer/post-create.sh
-# Runs once after the Codespace container is created.
-# ─────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  SEC Pipeline — Codespace Setup"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# ── Install Google Cloud CLI ──
+# ── Java 11 (required for PySpark) ──
+echo "▶ Installing Java 11..."
+apt-get update -qq && apt-get install -y -qq default-jdk-headless > /dev/null 2>&1
+echo "✅ Java installed: $(java -version 2>&1 | head -1)"
+
+# ── Google Cloud CLI ──
 echo "▶ Installing Google Cloud CLI..."
-curl -sSL https://sdk.cloud.google.com | bash -s -- --disable-prompts --install-dir=/usr/local/lib > /dev/null 2>&1
+curl -sSL https://sdk.cloud.google.com \
+  | bash -s -- --disable-prompts --install-dir=/usr/local/lib > /dev/null 2>&1
 ln -sf /usr/local/lib/google-cloud-sdk/bin/gcloud /usr/local/bin/gcloud
 ln -sf /usr/local/lib/google-cloud-sdk/bin/gsutil /usr/local/bin/gsutil
-ln -sf /usr/local/lib/google-cloud-sdk/bin/bq /usr/local/bin/bq
-echo "✅ gcloud installed"
+ln -sf /usr/local/lib/google-cloud-sdk/bin/bq     /usr/local/bin/bq
+echo "✅ gcloud installed: $(gcloud --version | head -1)"
 
 # ── Python dependencies ──
 echo "▶ Installing Python dependencies..."
@@ -44,18 +46,18 @@ echo "✅ Python dependencies installed"
 # ── Make scripts executable ──
 chmod +x terraform/bootstrap.sh
 
-# ── Verify tool versions ──
+# ── Summary ──
 echo ""
 echo "▶ Installed tools:"
 echo "  Python:    $(python --version)"
 echo "  Terraform: $(terraform version 2>/dev/null | head -1)"
-echo "  gcloud:    $(gcloud version 2>/dev/null | head -1)"
-echo "  dbt:       $(dbt --version 2>/dev/null | grep 'installed' | awk '{print $NF}' || echo 'check manually')"
-
+echo "  gcloud:    $(gcloud --version 2>/dev/null | head -1)"
+echo "  Java:      $(java -version 2>&1 | head -1)"
+echo "  dbt:       $(dbt --version 2>/dev/null | grep 'installed' | awk '{print $NF}' || echo 'installed')"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  ✅ Codespace ready! Start with Phase 1:"
+echo "  ✅ Codespace ready!"
 echo "     1. Run: bash terraform/bootstrap.sh"
 echo "     2. Fill in: terraform/terraform.tfvars"
-echo "     3. Run: cd terraform && terraform init ..."
+echo "     3. cd terraform && terraform init -backend-config=..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

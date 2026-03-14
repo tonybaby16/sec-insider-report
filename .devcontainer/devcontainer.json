@@ -5,12 +5,6 @@
   "features": {
     "ghcr.io/devcontainers/features/terraform:1": {
       "version": "1.7.5"
-    },
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {
-      "version": "latest"
-    },
-    "ghcr.io/devcontainers/features/java:1": {
-      "version": "11"
     }
   },
 
@@ -24,7 +18,6 @@
         "ms-python.black-formatter",
         "innoverio.vscode-dbt-power-user",
         "redhat.vscode-yaml",
-        "ms-azuretools.vscode-docker",
         "github.actions",
         "visualstudioexptteam.vscodeintellicode",
         "charliermarsh.ruff"
@@ -32,22 +25,18 @@
       "settings": {
         "python.defaultInterpreterPath": "/usr/local/bin/python",
         "editor.formatOnSave": true,
-        "editor.defaultFormatter": "ms-python.black-formatter",
         "[python]": {
           "editor.defaultFormatter": "ms-python.black-formatter"
         },
-        "terraform.languageServer.enable": true,
-        "files.exclude": {
-          "**/__pycache__": true,
-          "**/.terraform": false
-        }
+        "terraform.languageServer.enable": true
       }
     }
   },
 
   "remoteEnv": {
     "PYTHONPATH": "${containerWorkspaceFolder}",
-    "DBT_PROFILES_DIR": "${containerWorkspaceFolder}/dbt"
+    "DBT_PROFILES_DIR": "${containerWorkspaceFolder}/dbt",
+    "PATH": "${containerEnv:PATH}:/usr/local/lib/google-cloud-sdk/bin"
   },
 
   "forwardPorts": [8080, 8501],

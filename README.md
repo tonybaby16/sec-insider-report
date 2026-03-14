@@ -2,7 +2,7 @@
 
 > A full-stack data engineering portfolio project — end-to-end pipeline from SEC EDGAR raw data to interactive dashboard.
 
-[![Pipeline Status](https://github.com/YOUR_GITHUB_USERNAME/sec-insider-pipeline/actions/workflows/pipeline.yml/badge.svg)](https://github.com/YOUR_GITHUB_USERNAME/sec-insider-pipeline/actions)
+[![Pipeline Status](https://github.com/tonybaby16/sec-insider-pipeline/actions/workflows/pipeline.yml/badge.svg)](https://github.com/tonybaby16/sec-insider-pipeline/actions)
 
 ---
 
