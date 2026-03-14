@@ -7,8 +7,8 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 
 # ── System packages ──
 echo "▶ Installing system packages..."
-sudo apt-get update -qq
-sudo apt-get install -y -qq \
+apt-get update -qq
+apt-get install -y -qq \
   default-jdk-headless \
   unzip \
   curl \
@@ -20,18 +20,18 @@ echo "▶ Installing Terraform 1.7.5..."
 TERRAFORM_VERSION="1.7.5"
 curl -sLo /tmp/terraform.zip \
   "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip"
-sudo unzip -q /tmp/terraform.zip -d /usr/local/bin/
+unzip -q /tmp/terraform.zip -d /usr/local/bin/
 rm /tmp/terraform.zip
-sudo chmod +x /usr/local/bin/terraform
+chmod +x /usr/local/bin/terraform
 echo "✅ Terraform: $(terraform version | head -1)"
 
 # ── Google Cloud CLI ──
 echo "▶ Installing Google Cloud CLI..."
 curl -sSL https://sdk.cloud.google.com \
   | bash -s -- --disable-prompts --install-dir=/usr/local/lib > /dev/null 2>&1
-sudo ln -sf /usr/local/lib/google-cloud-sdk/bin/gcloud /usr/local/bin/gcloud
-sudo ln -sf /usr/local/lib/google-cloud-sdk/bin/gsutil /usr/local/bin/gsutil
-sudo ln -sf /usr/local/lib/google-cloud-sdk/bin/bq     /usr/local/bin/bq
+ln -sf /usr/local/lib/google-cloud-sdk/bin/gcloud /usr/local/bin/gcloud
+ln -sf /usr/local/lib/google-cloud-sdk/bin/gsutil /usr/local/bin/gsutil
+ln -sf /usr/local/lib/google-cloud-sdk/bin/bq     /usr/local/bin/bq
 echo "✅ gcloud: $(gcloud --version | head -1)"
 
 # ── Python dependencies ──

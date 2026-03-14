@@ -2,6 +2,8 @@
   "name": "SEC Insider Trading Pipeline",
   "image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
 
+  "remoteUser": "root",
+
   "postCreateCommand": "bash .devcontainer/post-create.sh",
 
   "customizations": {
@@ -28,7 +30,7 @@
   "remoteEnv": {
     "PYTHONPATH": "${containerWorkspaceFolder}",
     "DBT_PROFILES_DIR": "${containerWorkspaceFolder}/dbt",
-    "PATH": "${containerEnv:PATH}:/usr/local/lib/google-cloud-sdk/bin:/usr/local/bin/terraform_dir"
+    "PATH": "${containerEnv:PATH}:/usr/local/lib/google-cloud-sdk/bin"
   },
 
   "forwardPorts": [8080, 8501],
