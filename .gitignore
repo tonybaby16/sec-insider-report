@@ -1,0 +1,64 @@
+# ─── Terraform ───────────────────────────────
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+terraform.tfvars          # contains secrets — never commit
+*.tfplan
+crash.log
+
+# ─── GCP Credentials ─────────────────────────
+*.json                    # service account keys
+gcp-key.json
+application_default_credentials.json
+.gcloud/
+
+# ─── Python ──────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+venv/
+.venv/
+env/
+dist/
+build/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ─── dbt ─────────────────────────────────────
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+dbt/profiles.yml          # contains credentials — use env vars
+
+# ─── Great Expectations ──────────────────────
+great_expectations/uncommitted/
+great_expectations/.ge_store_backend_id
+
+# ─── Airflow ─────────────────────────────────
+airflow/logs/
+airflow/airflow.db
+airflow/airflow.cfg
+airflow/webserver_config.py
+
+# ─── Spark ───────────────────────────────────
+spark/derby.log
+metastore_db/
+
+# ─── Streamlit ───────────────────────────────
+streamlit/.streamlit/secrets.toml
+
+# ─── OS / Editor ─────────────────────────────
+.DS_Store
+.env
+.env.local
+*.env
+*.log
+.idea/
+.vscode/settings.json
+*.swp
+*.swo

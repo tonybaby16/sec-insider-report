@@ -1,0 +1,13 @@
+# ─────────────────────────────────────────────────────────────
+# terraform.tfvars — fill in your values before running apply
+# DO NOT commit this file to GitHub (it is in .gitignore)
+# ─────────────────────────────────────────────────────────────
+
+project_id        = "YOUR_GCP_PROJECT_ID"
+region            = "us-central1"
+bq_location       = "US"
+state_bucket_name = "YOUR_TERRAFORM_STATE_BUCKET"
+environment       = "dev"
+
+# Optional — leave empty string if you don't have Slack yet
+slack_webhook_url = ""

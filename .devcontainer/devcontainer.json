@@ -1,0 +1,66 @@
+{
+  "name": "SEC Insider Trading Pipeline",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
+
+  "features": {
+    "ghcr.io/devcontainers/features/terraform:1": {
+      "version": "1.7.5"
+    },
+    "ghcr.io/devcontainers/features/google-cloud-cli:1": {
+      "version": "latest",
+      "installAdditionalComponents": true
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "11"
+    }
+  },
+
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "hashicorp.terraform",
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "innoverio.vscode-dbt-power-user",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker",
+        "github.actions",
+        "visualstudioexptteam.vscodeintellicode",
+        "charliermarsh.ruff"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter"
+        },
+        "terraform.languageServer.enable": true,
+        "files.exclude": {
+          "**/__pycache__": true,
+          "**/.terraform": false
+        }
+      }
+    }
+  },
+
+  "remoteEnv": {
+    "PYTHONPATH": "${containerWorkspaceFolder}",
+    "DBT_PROFILES_DIR": "${containerWorkspaceFolder}/dbt"
+  },
+
+  "forwardPorts": [8080, 8501, 5432],
+  "portsAttributes": {
+    "8080": { "label": "Airflow UI", "onAutoForward": "notify" },
+    "8501": { "label": "Streamlit App", "onAutoForward": "openBrowser" }
+  },
+
+  "mounts": [
+    "source=${localEnv:HOME}/.config/gcloud,target=/home/vscode/.config/gcloud,type=bind,consistency=cached"
+  ]
+}
