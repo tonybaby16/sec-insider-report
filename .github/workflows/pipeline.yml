@@ -69,7 +69,7 @@ jobs:
 
       # ── 6. Run unit tests ──
       - name: Run unit tests
-        run: pytest spark/tests/ -v --tb=short
+        run: PYTHONPATH=spark pytest spark/tests/ -v --tb=short
 
       # ── 7. PySpark Ingestion ──
       - name: Run PySpark ingestion
