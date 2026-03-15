@@ -44,19 +44,23 @@ curl -LsSf https://astral.sh/uv/install.sh | bash > /dev/null 2>&1
 export PATH="$HOME/.cargo/bin:$PATH"
 echo "✅ uv: $(uv --version)"
 
+# Verify installation with the full path if the shortcut fails
+UV_BIN="$HOME/.cargo/bin/uv"
+echo "✅ uv: $($UV_BIN --version)"
+
 # ── Python dependencies via uv ──
 echo "▶ Installing Python dependencies via uv (~1 min)..."
-uv pip install --system \
+$UV_BIN pip install --system \
   pyspark==3.5.1 \
   google-cloud-bigquery==3.20.1 \
   google-cloud-storage==2.16.0 \
   google-cloud-secret-manager==2.20.0 \
-  "great-expectations>=1.0.0,<2.0.0" \
+  "great-expectations>=0.18.0,<1.0.0" \
   dbt-bigquery==1.7.7 \
   "apache-airflow==2.9.1" \
-  "apache-airflow-providers-google>=10.20.0" \
+  "apache-airflow-providers-google==10.18.0" \
   streamlit==1.35.0 \
-  "pandas>=2.1.0,<2.3" \
+  "pandas>=1.3.0,<2.2.0" \
   pyarrow==16.1.0 \
   plotly==5.22.0 \
   requests==2.32.3 \

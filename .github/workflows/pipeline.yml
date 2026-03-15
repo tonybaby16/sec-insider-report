@@ -69,7 +69,10 @@ jobs:
 
       # ── 6. Run unit tests ──
       - name: Run unit tests
-        run: PYTHONPATH=spark pytest spark/tests/ -v --tb=short
+        run: |
+          # Use $GITHUB_WORKSPACE to ensure the path is absolute
+          export PYTHONPATH=$PYTHONPATH:$GITHUB_WORKSPACE/spark
+          pytest spark/tests/ -v --tb=short
 
       # ── 7. PySpark Ingestion ──
       - name: Run PySpark ingestion
