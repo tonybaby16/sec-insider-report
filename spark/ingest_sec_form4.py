@@ -153,19 +153,25 @@ def fetch_form4_index(year: int, quarter: int) -> list[dict]:
     # Skip header lines (first 10 lines are headers/separators)
     filings = []
     for line in lines[10:]:
-        if len(line) < 98:
+        if len(line) < 40:
             continue
-        # Fixed-width format: Company(62) | Form(12) | CIK(12) | Date(12) | Filename
         form_type = line[62:74].strip()
         if form_type not in ("4", "4/A"):
             continue
 
         cik = line[74:86].strip()
         filing_date = line[86:98].strip()
-        filename = line[98:].strip()
-        accession = filename.replace("/", "-").replace(".txt", "").split("-")
-        accession_num = "-".join(accession[-3:]) if len(accession) >= 3 else filename
         company_name = line[0:62].strip()
+
+        # Find filename by locating 'edgar/' — avoids fixed-width offset issues
+        edgar_pos = line.find("edgar/")
+        if edgar_pos == -1:
+            continue
+        filename = line[edgar_pos:].strip()
+
+        # Build accession number from filename
+        parts = filename.replace(".txt", "").split("/")
+        accession_num = parts[-1] if parts else filename
 
         filings.append(
             {
