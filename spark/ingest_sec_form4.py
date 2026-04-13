@@ -53,7 +53,7 @@ log = logging.getLogger("sec_form4_ingestion")
 
 # ── Constants ─────────────────────────────────────────────────────────
 EDGAR_BASE_URL = "https://www.sec.gov/Archives/edgar/full-index"
-REQUEST_DELAY = 0.15  # 150ms between requests = ~6 req/s (well under 10/s limit)
+REQUEST_DELAY = 0.5  # 150ms between requests = ~6 req/s (well under 10/s limit)
 MAX_RETRIES = 3
 RETRY_BACKOFF = 2  # seconds, doubles on each retry
 
@@ -356,7 +356,7 @@ def process_quarter_with_spark(
 
     # Distribute filings across Spark workers
     filings_rdd = spark.sparkContext.parallelize(
-        filings, numSlices=min(len(filings), 50)
+        filings, numSlices=1)
     )
 
     # Each worker fetches and parses its subset of filings
