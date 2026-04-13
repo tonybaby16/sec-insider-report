@@ -376,22 +376,43 @@ def process_quarter_with_spark(
 # ── GCS Writer ────────────────────────────────────────────────────────
 
 
-def write_to_gcs(
-    df: "pyspark.sql.DataFrame",
-    bucket_name: str,
-    quarter_label: str,
-) -> str:
-    """
-    Write DataFrame as partitioned Parquet to GCS.
-    Partition by quarter for efficient downstream querying.
-    Output path: gs://{bucket}/form4/quarter={quarter_label}/
-    """
-    gcs_path = f"gs://{bucket_name}/form4/quarter={quarter_label}"
-    log.info(f"Writing Parquet to {gcs_path}...")
+import tempfile
+import shutil
+from google.cloud import storage as gcs
 
-    (df.write.mode("overwrite").parquet(gcs_path))
 
-    log.info(f"✅ Written to {gcs_path}")
+def write_to_gcs(df, bucket_name: str, quarter_label: str) -> str:
+    """
+    Write DataFrame as Parquet locally then upload to GCS.
+    Avoids Hadoop GCS connector Guava version conflicts.
+    """
+    gcs_prefix = f"form4/quarter={quarter_label}"
+    local_dir = f"/tmp/form4_quarter={quarter_label}"
+
+    # Write Parquet to local disk first
+    log.info(f"Writing Parquet locally to {local_dir}...")
+    df.write.mode("overwrite").parquet(local_dir)
+
+    # Upload each file to GCS
+    log.info(f"Uploading to gs://{bucket_name}/{gcs_prefix}/...")
+    client = gcs.Client()
+    bucket = client.bucket(bucket_name)
+
+    uploaded = 0
+    for root, dirs, files in os.walk(local_dir):
+        for filename in files:
+            if not filename.endswith(".parquet"):
+                continue
+            local_path = os.path.join(root, filename)
+            blob_name = f"{gcs_prefix}/{filename}"
+            bucket.blob(blob_name).upload_from_filename(local_path)
+            uploaded += 1
+
+    # Clean up local temp files
+    shutil.rmtree(local_dir, ignore_errors=True)
+
+    gcs_path = f"gs://{bucket_name}/{gcs_prefix}"
+    log.info(f"✅ Uploaded {uploaded} Parquet file(s) to {gcs_path}")
     return gcs_path
 
 
@@ -458,19 +479,6 @@ def main():
         .config("spark.executor.memory", "2g")
         .config("spark.sql.shuffle.partitions", "8")
         .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-        .config(
-            "spark.jars.packages",
-            "com.google.cloud.bigdataoss:gcs-connector:hadoop3-2.2.22",
-        )
-        .config(
-            "spark.hadoop.fs.gs.impl",
-            "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem",
-        )
-        .config(
-            "spark.hadoop.fs.AbstractFileSystem.gs.impl",
-            "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS",
-        )
-        .config("spark.hadoop.google.cloud.auth.service.account.enable", "true")
         .getOrCreate()
     )
     spark.sparkContext.setLogLevel("WARN")
