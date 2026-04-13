@@ -355,9 +355,7 @@ def process_quarter_with_spark(
     log.info(f"Processing {len(filings)} filings for {quarter_label} via Spark...")
 
     # Distribute filings across Spark workers
-    filings_rdd = spark.sparkContext.parallelize(
-        filings, numSlices=1)
-    )
+    filings_rdd = spark.sparkContext.parallelize(filings, numSlices=1)
 
     # Each worker fetches and parses its subset of filings
     records_rdd = filings_rdd.flatMap(fetch_and_parse_filing)
