@@ -460,6 +460,19 @@ def main():
         .config("spark.executor.memory", "2g")
         .config("spark.sql.shuffle.partitions", "8")
         .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+        .config(
+            "spark.jars.packages",
+            "com.google.cloud.bigdataoss:gcs-connector:hadoop3-2.2.22",
+        )
+        .config(
+            "spark.hadoop.fs.gs.impl",
+            "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem",
+        )
+        .config(
+            "spark.hadoop.fs.AbstractFileSystem.gs.impl",
+            "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS",
+        )
+        .config("spark.hadoop.google.cloud.auth.service.account.enable", "true")
         .getOrCreate()
     )
     spark.sparkContext.setLogLevel("WARN")
