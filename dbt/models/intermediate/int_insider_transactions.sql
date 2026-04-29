@@ -62,7 +62,7 @@ enriched as (
         buy_sell_flag,
         transaction_shares,
         price_per_share,
-        transaction_value_usd,
+        cast(transaction_value_usd as numeric) as transaction_value_usd,
         shares_owned_after,
         ownership_type,
         security_title,
