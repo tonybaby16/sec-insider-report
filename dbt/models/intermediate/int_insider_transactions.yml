@@ -10,7 +10,7 @@ models:
       - name: accession_number
         description: "Unique filing ID — deduplicated"
         tests:
-          - not_nullL:
+          - not_null:
               config:
                 severity: warn
 
