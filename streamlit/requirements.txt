@@ -1,8 +1,10 @@
-# Only what the dashboard needs — not the full pipeline stack
+# streamlit/requirements.txt
+# pyarrow and pandas unpinned — let uv resolve wheels for the active Python version
+ 
 streamlit==1.35.0
 google-cloud-bigquery==3.20.1
 google-auth==2.29.0
 db-dtypes==1.2.0
-pandas==2.2.2
+pandas>=2.0.0
+pyarrow>=17.0.0
 plotly==5.22.0
-pyarrow==15.0.2
