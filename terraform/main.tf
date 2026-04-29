@@ -148,6 +148,11 @@ resource "google_storage_bucket_iam_member" "sa_gcs_raw" {
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_service_account.pipeline_sa.email}"
 }
+resource "google_project_iam_member" "sa_bq_user" {
+  project = var.project_id
+  role    = "roles/bigquery.user"
+  member  = "serviceAccount:${google_service_account.pipeline_sa.email}"
+}
 
 # BigQuery: Data Editor on all four datasets
 resource "google_bigquery_dataset_iam_member" "sa_bq_raw" {
