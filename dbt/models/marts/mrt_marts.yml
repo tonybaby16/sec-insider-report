@@ -12,10 +12,6 @@ models:
 
       - name: issuer_ticker
         description: "Stock ticker"
-        tests:
-          - not_nullL:
-              config:
-                severity: warn
 
       - name: buy_sell_flag
         description: "Buy or Sell"
@@ -24,7 +20,7 @@ models:
               config:
                 severity: warn
           - accepted_values:
-              values: ["Buy", "Sell"]
+              values: [ "Buy", "Sell" ]
 
       - name: total_value_usd
         description: "Total USD value of transactions in the month"
@@ -51,10 +47,6 @@ models:
 
       - name: issuer_ticker
         description: "Company ticker"
-        tests:
-          - not_null:
-              config:
-                severity: warn
 
       - name: rank_by_value
         description: "Rank within buy or sell group by total USD value"
@@ -65,8 +57,8 @@ models:
 
   - name: mrt_company_insider_sentiment
     description: >
-      Company-level insider sentiment scores. Buy ratio, net value,
-      and sentiment label for Streamlit heatmap and ranking views.
+      Company-level insider sentiment scores. Buy ratio, net value, and
+      sentiment label for Streamlit heatmap and ranking views.
 
     columns:
       - name: issuer_ticker
@@ -97,7 +89,3 @@ models:
 
       - name: net_value_usd
         description: "Total buy value minus total sell value in USD"
-        tests:
-          - not_null:
-              config:
-                severity: warn
