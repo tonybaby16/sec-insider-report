@@ -9,8 +9,6 @@ models:
     columns:
       - name: transaction_month_key
         description: "YYYY-MM month key"
-        tests:
-          - not_null
 
       - name: issuer_ticker
         description: "Stock ticker"

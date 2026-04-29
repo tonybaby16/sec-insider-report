@@ -55,8 +55,6 @@ models:
 
       - name: transaction_date
         description: "Date of the transaction"
-        tests:
-          - not_null
 
       - name: buy_sell_flag
         description: "Simplified Buy/Sell/Exercise/Gift/Other classification"

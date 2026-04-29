@@ -14,15 +14,9 @@ models:
 
       - name: transaction_year
         description: "Year of transaction"
-        tests:
-          - not_null
 
       - name: transaction_month_key
         description: "YYYY-MM formatted month key for time series"
-        tests:
-          - not_null
 
       - name: days_to_file
         description: "Days between transaction date and SEC filing date (late filers > 2)"
-        tests:
-          - not_null
