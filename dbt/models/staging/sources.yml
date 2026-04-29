@@ -1,0 +1,73 @@
+version: 2
+
+sources:
+  - name: sec_raw
+    database: "{{ env_var('GCP_PROJECT_ID') }}"
+    schema: sec_raw
+    description: "Raw SEC Form 4 insider trading data loaded from GCS Parquet files"
+
+    freshness:
+      warn_after: { count: 45, period: day }
+      error_after: { count: 90, period: day }
+
+    loaded_at_field: ingested_at
+
+    tables:
+      - name: form4_transactions
+        description: >
+          Raw Form 4 filings loaded directly from GCS. One row per non-derivative
+          transaction. Schema enforced by PySpark ingestion script.
+
+        columns:
+          - name: accession_number
+            description: "Unique SEC filing identifier — primary key"
+            tests:
+              - not_null
+
+          - name: cik
+            description: "SEC Central Index Key for the filer"
+            tests:
+              - not_null
+
+          - name: issuer_ticker
+            description: "Stock ticker symbol of the company"
+
+          - name: transaction_code
+            description: "S=Sale, P=Purchase, M=Exercise, G=Gift, F=Tax withholding"
+            tests:
+              - accepted_values:
+                  values:
+                    [
+                      "S",
+                      "P",
+                      "M",
+                      "G",
+                      "F",
+                      "A",
+                      "C",
+                      "D",
+                      "E",
+                      "H",
+                      "I",
+                      "J",
+                      "K",
+                      "L",
+                      "O",
+                      "U",
+                      "W",
+                      "X",
+                      "Z",
+                    ]
+
+          - name: transaction_date
+            description: "Date the transaction occurred"
+
+          - name: ingested_at
+            description: "UTC timestamp when the record was ingested by the pipeline"
+            tests:
+              - not_null
+
+          - name: quarter
+            description: "Pipeline partition key e.g. 2024Q1"
+            tests:
+              - not_null

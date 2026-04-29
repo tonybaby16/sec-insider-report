@@ -2,7 +2,6 @@ name: SEC Pipeline
 
 on:
   schedule:
-    # Run monthly on the 1st at 06:00 UTC
     - cron: "0 6 1 * *"
   workflow_dispatch:
     inputs:
@@ -11,11 +10,11 @@ on:
         required: false
         default: "Manual run"
       years:
-        description: "Years to ingest (comma-separated, e.g. 2024)"
+        description: "Years to ingest (e.g. 2024)"
         required: false
         default: "2024"
       quarters:
-        description: "Quarters to ingest (comma-separated e.g. 1,2 or 'all')"
+        description: "Quarters to ingest (e.g. 1,2 or 'all')"
         required: false
         default: "all"
       max_filings:
@@ -68,11 +67,10 @@ jobs:
         run: uv pip install --system -r requirements.txt
 
       # ── 6. Run unit tests ──
-      #- name: Run unit tests
-      #  run: |
-      #    pytest --pythonpath=spark spark/tests/ -v --tb=short
+      - name: Run unit tests
+        run: pytest spark/tests/ -v --tb=short
 
-      # ── 7. PySpark Ingestion ──
+      # ── 7. PySpark Ingestion → GCS ──
       - name: Run PySpark ingestion
         env:
           SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
@@ -88,7 +86,6 @@ jobs:
             --quarters $QUARTERS \
             --smoke-test"
 
-          # Add --max-filings only if set
           if [ -n "$MAX_FILINGS" ]; then
             CMD="$CMD --max-filings $MAX_FILINGS"
           fi
@@ -96,19 +93,33 @@ jobs:
           echo "Running: $CMD"
           $CMD
 
-      # ── 8. Great Expectations validation (Phase 4) ──
+      # ── 8. Load GCS Parquet → BigQuery RAW ──
+      - name: Load GCS to BigQuery RAW
+        env:
+          GOOGLE_CLOUD_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          python scripts/load_gcs_to_bq.py \
+            --bucket  $GCS_BUCKET \
+            --project $PROJECT_ID \
+            --quarters all
+
+      # ── 9. Great Expectations validation (Phase 4) ──
       - name: Run data quality checks
         run: |
           echo "Phase 4 — Great Expectations not yet implemented"
           # great_expectations checkpoint run sec_raw_checkpoint
 
-      # ── 9. dbt run (Phase 3) ──
+      # ── 10. dbt run ──
       - name: Run dbt models
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
         run: |
-          echo "Phase 3 — dbt not yet implemented"
-          # cd dbt && dbt run && dbt test
+          cd dbt
+          dbt deps
+          dbt run  --profiles-dir . --target prod
+          dbt test --profiles-dir . --target prod
 
-      # ── 10. Notify on failure ──
+      # ── 11. Notify on failure ──
       - name: Notify Slack on failure
         if: failure()
         run: |
