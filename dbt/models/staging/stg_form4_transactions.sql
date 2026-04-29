@@ -63,7 +63,7 @@ cleaned as (
             else 'Other'
         end                                             as transaction_type,
 
-        transaction_shares,
+        cast(transaction_shares as numeric)             as transaction_shares,
         price_per_share,
         shares_owned_after,
 
