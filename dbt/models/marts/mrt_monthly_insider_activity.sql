@@ -3,10 +3,6 @@
     materialized = 'table',
     schema       = 'sec_marts',
     description  = 'Monthly insider trading activity aggregated by company and month',
-    /*partition_by = {
-      'field': 'transaction_month_key',
-      'data_type': 'string'
-    },*/
     cluster_by   = ['issuer_ticker', 'buy_sell_flag']
   )
 }}
