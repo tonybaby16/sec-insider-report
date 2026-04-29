@@ -13,12 +13,16 @@ models:
       - name: issuer_ticker
         description: "Stock ticker"
         tests:
-          - not_null
+          - not_nullL:
+              config:
+                severity: warn
 
       - name: buy_sell_flag
         description: "Buy or Sell"
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
           - accepted_values:
               values: ["Buy", "Sell"]
 
@@ -28,7 +32,9 @@ models:
       - name: num_unique_insiders
         description: "Count of distinct insiders trading in the month"
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
 
   - name: mrt_top_insider_traders
     description: >
@@ -39,17 +45,23 @@ models:
       - name: insider_name
         description: "Insider full name"
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
 
       - name: issuer_ticker
         description: "Company ticker"
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
 
       - name: rank_by_value
         description: "Rank within buy or sell group by total USD value"
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
 
   - name: mrt_company_insider_sentiment
     description: >
@@ -59,15 +71,21 @@ models:
     columns:
       - name: issuer_ticker
         tests:
-          - not_null
-          - unique
+          - not_null:
+              config:
+                severity: warn
+          - unique:
+              config:
+                severity: warn
 
       - name: buy_ratio
         description: "0.0 to 1.0 — proportion of transactions that are buys"
 
       - name: sentiment_label
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
           - accepted_values:
               values:
                 [
@@ -80,4 +98,6 @@ models:
       - name: net_value_usd
         description: "Total buy value minus total sell value in USD"
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn

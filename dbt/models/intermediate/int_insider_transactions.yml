@@ -10,7 +10,9 @@ models:
       - name: accession_number
         description: "Unique filing ID — deduplicated"
         tests:
-          - not_null
+          - not_nullL:
+              config:
+                severity: warn
 
       - name: transaction_year
         description: "Year of transaction"

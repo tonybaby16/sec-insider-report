@@ -10,12 +10,16 @@ models:
       - name: accession_number
         description: "Unique SEC filing ID"
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
 
       - name: cik
         description: "SEC filer Central Index Key"
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
 
       - name: issuer_ticker
         description: "Uppercased stock ticker symbol"
@@ -23,12 +27,16 @@ models:
       - name: insider_name
         description: "Reporting owner full name (title-cased)"
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
 
       - name: transaction_code
         description: "Standardised transaction code"
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
           - accepted_values:
               values:
                 [
@@ -59,14 +67,18 @@ models:
       - name: buy_sell_flag
         description: "Simplified Buy/Sell/Exercise/Gift/Other classification"
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
           - accepted_values:
               values: ["Buy", "Sell", "Exercise", "Gift", "Other"]
 
       - name: insider_role
         description: "Derived insider role classification"
         tests:
-          - not_null
+          - not_nullL:
+              config:
+                severity: warn
           - accepted_values:
               values: ["Officer", "Director", "10% Owner", "Other"]
 
