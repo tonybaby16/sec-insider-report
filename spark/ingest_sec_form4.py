@@ -193,10 +193,32 @@ def fetch_form4_index(year: int, quarter: int) -> list[dict]:
 
 
 def extract_xml_value(xml: str, tag: str) -> str | None:
-    """Simple regex-based XML value extractor — avoids heavy XML parser overhead."""
-    pattern = rf"<{tag}[^>]*>([^<]*)</{tag}>"
-    match = re.search(pattern, xml, re.IGNORECASE)
-    return match.group(1).strip() if match else None
+    """
+    Extract value from XML tag — handles both direct and nested <value> patterns.
+
+    SEC EDGAR Form 4 XML uses two patterns:
+      Direct:  <issuerName>Apple Inc.</issuerName>
+      Nested:  <transactionShares><value>50000</value></transactionShares>
+
+    This function handles both.
+    """
+    # Match the outer tag (with optional attributes)
+    pattern = rf"<{tag}[^>]*>(.*?)</{tag}>"
+    match = re.search(pattern, xml, re.DOTALL | re.IGNORECASE)
+    if not match:
+        return None
+
+    inner = match.group(1).strip()
+
+    # If inner content contains a <value> child tag, extract that
+    value_match = re.search(r"<value[^>]*>([^<]*)</value>", inner, re.IGNORECASE)
+    if value_match:
+        return value_match.group(1).strip()
+
+    # Otherwise return direct text content (strip any remaining tags)
+    # Remove any XML tags that might be present
+    direct = re.sub(r"<[^>]+>", "", inner).strip()
+    return direct if direct else None
 
 
 def safe_float(value: str | None) -> float | None:
