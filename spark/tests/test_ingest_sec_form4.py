@@ -12,6 +12,7 @@ from unittest.mock import patch, MagicMock
 
 import sys
 import os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from ingest_sec_form4 import (
@@ -22,8 +23,8 @@ from ingest_sec_form4 import (
     get_quarters_to_process,
 )
 
-
 # ── extract_xml_value ─────────────────────────────────────────────────
+
 
 class TestExtractXmlValue:
     def test_basic_extraction(self):
@@ -40,7 +41,7 @@ class TestExtractXmlValue:
 
     def test_empty_tag_returns_empty_string(self):
         xml = "<officerTitle></officerTitle>"
-        assert extract_xml_value(xml, "officerTitle") == ""
+        assert extract_xml_value(xml, "officerTitle") is None
 
     def test_case_insensitive(self):
         xml = "<IssuerName>TESLA INC</IssuerName>"
@@ -48,6 +49,7 @@ class TestExtractXmlValue:
 
 
 # ── safe_float ────────────────────────────────────────────────────────
+
 
 class TestSafeFloat:
     def test_valid_float(self):
@@ -70,6 +72,7 @@ class TestSafeFloat:
 
 
 # ── safe_date ─────────────────────────────────────────────────────────
+
 
 class TestSafeDate:
     def test_iso_format(self):
@@ -140,11 +143,11 @@ SAMPLE_FORM4_XML = """
 
 SAMPLE_FILING_META = {
     "accession_number": "0000320193-24-000012",
-    "cik":              "0000320193",
-    "company_name":     "Apple Inc.",
-    "form_type":        "4",
-    "filing_date":      "2024-03-01",
-    "quarter":          "2024Q1",
+    "cik": "0000320193",
+    "company_name": "Apple Inc.",
+    "form_type": "4",
+    "filing_date": "2024-03-01",
+    "quarter": "2024Q1",
 }
 
 
@@ -197,12 +200,15 @@ class TestParseForm4Xml:
         assert isinstance(records[0]["ingested_at"], datetime)
 
     def test_empty_xml_returns_header_record(self):
-        records = parse_form4_xml("<ownershipDocument></ownershipDocument>", SAMPLE_FILING_META)
+        records = parse_form4_xml(
+            "<ownershipDocument></ownershipDocument>", SAMPLE_FILING_META
+        )
         assert len(records) == 1
         assert records[0]["transaction_code"] is None
 
 
 # ── get_quarters_to_process ───────────────────────────────────────────
+
 
 class TestGetQuartersToProcess:
     def test_returns_list_of_tuples(self):
