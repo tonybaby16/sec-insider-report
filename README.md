@@ -1,3 +1,9 @@
+## Problem Statement
+
+Corporate insiders — executives, directors, and major shareholders — have access to material non-public information about the companies they work for. When they buy or sell shares in their own company, those transactions must be disclosed to the SEC within two business days via Form 4 filings. These filings are a matter of public record, but they are published as raw XML across thousands of individual documents with no consolidated, queryable structure.
+This project solves the volume, data quality and accessibility challenges. It builds a production-grade data pipeline that automatically collects Form 4 filings from EDGAR, processes and models them through a multi-layer data warehouse, and surfaces the results through an interactive dashboard — turning 80,000 raw XML documents per quarter into actionable insider trading intelligence.
+Note that the current dataset has processed 4000 XML documents to keep the run time under 2 hours.
+
 # SEC Insider Trading Pipeline
 
 An end-to-end data engineering project that ingests SEC Form 4 insider trading filings from EDGAR, processes and models the data through a multi-layer warehouse architecture, and serves insights through an interactive dashboard.
@@ -13,7 +19,7 @@ Streamlit App @ https://sec-insider-report.streamlit.app
 
 ## What It Does
 
-Corporate insiders — directors, officers, and major shareholders — are required to report their trades to the SEC within two business days via Form 4 filings. This pipeline collects those filings, structures them into a queryable data warehouse, and answers questions like:
+This pipeline collects Form 4 filings, structures them into a queryable data warehouse, and answers questions like:
 
 - Which insiders have sold the most shares in the last 90 days?
 - Which companies have the highest ratio of insider sells to buys?
