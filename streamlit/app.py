@@ -28,7 +28,7 @@ def get_bigquery_client():
     try:
         project_id = st.secrets.get("GCP_PROJECT_ID") or os.getenv("GCP_PROJECT_ID")
 
-        if "gcp_service_account" in st.secrets:
+        if "gcp_service_account" in st.cdsecrets:
             # Streamlit Cloud — use service account from secrets
             credentials = service_account.Credentials.from_service_account_info(
                 st.secrets["gcp_service_account"],
@@ -77,7 +77,7 @@ def load_monthly_activity():
             avg_price_per_share,
             max_single_transaction_usd,
             net_sentiment_usd
-        FROM `{project}.sec_marts.mrt_monthly_insider_activity`
+        FROM `{project}.sec_staging_sec_marts.mrt_monthly_insider_activity`
         ORDER BY transaction_month_key DESC
     """
     try:
@@ -111,7 +111,7 @@ def load_top_traders(limit: int = 50):
             first_transaction_date,
             last_transaction_date,
             rank_by_value
-        FROM `{project}.sec_marts.mrt_top_insider_traders`
+        FROM `{project}.sec_staging_sec_marts.mrt_top_insider_traders`
         WHERE rank_by_value <= {limit}
         ORDER BY buy_sell_flag, rank_by_value
     """
@@ -131,7 +131,7 @@ def load_company_sentiment():
 
     query = f"""
         SELECT *
-        FROM `{project}.sec_marts.mrt_company_insider_sentiment`
+        FROM `{project}.sec_staging_sec_marts.mrt_company_insider_sentiment`
         ORDER BY ABS(net_value_usd) DESC
         LIMIT 100
     """
@@ -151,7 +151,7 @@ def load_company_list():
 
     query = f"""
         SELECT DISTINCT issuer_ticker, issuer_name
-        FROM `{project}.sec_marts.mrt_monthly_insider_activity`
+        FROM `{project}.sec_staging_sec_marts.mrt_monthly_insider_activity`
         WHERE issuer_ticker IS NOT NULL
         ORDER BY issuer_ticker
     """
