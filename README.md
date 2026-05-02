@@ -22,6 +22,7 @@ Corporate insiders — directors, officers, and major shareholders — are requi
 ---
 
 ## Architecture
+<img width="1408" height="768" alt="architecture" src="https://github.com/user-attachments/assets/5031abfe-ea8d-491e-8242-ec94f3333894" />
 
 ```
 SEC EDGAR (Form 4 XML)
