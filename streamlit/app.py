@@ -188,6 +188,23 @@ if st.sidebar.button("🔄 Refresh Data"):
 
 # ── Main Title ───────────────────────────────────────────────────────────────
 st.title("📈 SEC Insider Trading Dashboard")
+# ── Temporary debug block — remove after fixing ──────────────────────
+with st.expander("🔍 Debug Info", expanded=True):
+    project = get_project_id()
+    st.write("Project ID:", project or "❌ NOT SET")
+    st.write("Has gcp_service_account secret:", "gcp_service_account" in st.secrets)
+    st.write("Has GCP_PROJECT_ID secret:", "GCP_PROJECT_ID" in st.secrets)
+    client = get_bigquery_client()
+    st.write("BigQuery client:", "✅ Initialized" if client else "❌ None")
+    if client:
+        try:
+            result = client.query(
+                f"SELECT COUNT(*) as n FROM `{project}.sec_staging_sec_marts.mrt_monthly_insider_activity`"
+            ).to_dataframe()
+            st.write("Row count:", result["n"].iloc[0])
+        except Exception as e:
+            st.error(f"Query failed: {e}")
+# ── End debug block ───────────────────────────────────────────────────
 st.markdown(
     "### Real-time analysis of insider trading activity from SEC Form 4 filings"
 )
