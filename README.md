@@ -3,6 +3,7 @@
 An end-to-end data engineering project that ingests SEC Form 4 insider trading filings from EDGAR, processes and models the data through a multi-layer warehouse architecture, and serves insights through an interactive dashboard.
 
 Streamlit App @ https://sec-insider-report.streamlit.app
+[![Pipeline](https://github.com/tonybaby16/sec-insider-report/actions/workflows/pipeline.yml/badge.svg)](https://github.com/tonybaby16/sec-insider-report/actions)
 <img width="1203" height="793" alt="image" src="https://github.com/user-attachments/assets/80e1cef5-67c5-4dd1-a5b8-7de8a8dff4cc" />
 <img width="1060" height="525" alt="image" src="https://github.com/user-attachments/assets/9c6cb430-e69b-4a1a-b4e9-a570940cc7ea" />
 
