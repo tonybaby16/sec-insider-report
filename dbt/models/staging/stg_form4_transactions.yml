@@ -71,19 +71,19 @@ models:
               config:
                 severity: warn
           - accepted_values:
-              values: ["Buy", "Sell", "Exercise", "Gift", "Other"]
+              values: [ "Buy", "Sell", "Exercise", "Gift", "Other" ]
 
       - name: insider_role
         description: "Derived insider role classification"
         tests:
-          - not_nullL:
+          - not_null:
               config:
                 severity: warn
           - accepted_values:
-              values: ["Officer", "Director", "10% Owner", "Other"]
+              values: [ "Officer", "Director", "10% Owner", "Other" ]
 
       - name: ownership_type
         description: "Direct or Indirect ownership"
         tests:
           - accepted_values:
-              values: ["Direct", "Indirect", "D", "I", null]
+              values: [ "Direct", "Indirect", "D", "I", null ]
