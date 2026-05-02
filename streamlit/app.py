@@ -28,7 +28,7 @@ def get_bigquery_client():
     try:
         project_id = st.secrets.get("GCP_PROJECT_ID") or os.getenv("GCP_PROJECT_ID")
 
-        if "gcp_service_account" in st.cdsecrets:
+        if "gcp_service_account" in st.secrets:
             # Streamlit Cloud — use service account from secrets
             credentials = service_account.Credentials.from_service_account_info(
                 st.secrets["gcp_service_account"],
