@@ -12,7 +12,7 @@ Flow:
   6. Write partitioned Parquet to GCS raw landing zone
 
 SEC EDGAR Bulk Data: https://www.sec.gov/Archives/edgar/full-index/
-Rate limit:         10 requests/second max (enforced via semaphore)
+Rate limit:         10 requests/second max (enforced via sleep)
 User-Agent:         Required by SEC — set via env var SEC_USER_AGENT
 ─────────────────────────────────────────────────────────────────────
 """
@@ -21,27 +21,29 @@ import os
 import sys
 import time
 import logging
+import zipfile
+import io
 import re
-import shutil
 import argparse
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, date
-from threading import Semaphore
+from typing import Iterator
 
 import requests
 import pandas as pd
 from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
 from pyspark.sql.types import (
     StructType,
     StructField,
     StringType,
     DateType,
     DoubleType,
+    LongType,
     TimestampType,
 )
-from google.cloud import storage as gcs
+from google.cloud import storage
 
-# ── Logging ───────────────────────────────────────────────────────────
+# ── Logging ──────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
@@ -49,17 +51,13 @@ logging.basicConfig(
 )
 log = logging.getLogger("sec_form4_ingestion")
 
-# ── Constants ──────────────────────────────────────────────────────────
+# ── Constants ─────────────────────────────────────────────────────────
 EDGAR_BASE_URL = "https://www.sec.gov/Archives/edgar/full-index"
-REQUEST_DELAY = 0.1  # 100ms per thread — 5 threads = ~5 req/s aggregate
+REQUEST_DELAY = 0.5  # 150ms between requests = ~6 req/s (well under 10/s limit)
 MAX_RETRIES = 3
-RETRY_BACKOFF = 2
-MAX_WORKERS = 5  # concurrent HTTP threads
+RETRY_BACKOFF = 2  # seconds, doubles on each retry
 
-# Shared rate limiter — max 5 concurrent requests at any time
-_rate_limiter = Semaphore(MAX_WORKERS)
-
-# ── Schema ─────────────────────────────────────────────────────────────
+# ── Form 4 Raw Schema ─────────────────────────────────────────────────
 FORM4_SCHEMA = StructType(
     [
         StructField("accession_number", StringType(), nullable=False),
@@ -83,16 +81,17 @@ FORM4_SCHEMA = StructType(
         StructField("shares_owned_after", DoubleType(), nullable=True),
         StructField("direct_or_indirect", StringType(), nullable=True),
         StructField("security_title", StringType(), nullable=True),
-        StructField("quarter", StringType(), nullable=True),
+        StructField("quarter", StringType(), nullable=True),  # e.g. 2024Q1
         StructField("ingested_at", TimestampType(), nullable=True),
     ]
 )
 
 
-# ── HTTP Helpers ───────────────────────────────────────────────────────
+# ── HTTP Helpers ──────────────────────────────────────────────────────
 
 
 def get_user_agent() -> str:
+    """SEC requires a descriptive User-Agent with contact email."""
     agent = os.environ.get("SEC_USER_AGENT")
     if not agent:
         raise EnvironmentError(
@@ -103,15 +102,14 @@ def get_user_agent() -> str:
 
 
 def fetch_url(url: str, retries: int = MAX_RETRIES) -> bytes:
-    """Fetch URL with shared rate limiter and retry logic."""
+    """Fetch a URL with retry logic and rate limiting."""
     headers = {"User-Agent": get_user_agent()}
     for attempt in range(retries):
         try:
-            with _rate_limiter:
-                time.sleep(REQUEST_DELAY)
-                response = requests.get(url, headers=headers, timeout=30)
-                response.raise_for_status()
-                return response.content
+            time.sleep(REQUEST_DELAY)
+            response = requests.get(url, headers=headers, timeout=30)
+            response.raise_for_status()
+            return response.content
         except requests.RequestException as e:
             wait = RETRY_BACKOFF**attempt
             log.warning(
@@ -121,29 +119,38 @@ def fetch_url(url: str, retries: int = MAX_RETRIES) -> bytes:
     raise RuntimeError(f"Failed to fetch {url} after {retries} attempts")
 
 
-# ── Quarter Discovery ──────────────────────────────────────────────────
+# ── Quarter Discovery ─────────────────────────────────────────────────
 
 
 def get_quarters_to_process(years: list[int]) -> list[tuple[int, int]]:
+    """Return list of (year, quarter) tuples to process."""
     quarters = []
     today = date.today()
     for year in years:
         for q in range(1, 5):
-            quarter_end = date(year, q * 3, 1)
+            # Don't process future quarters
+            quarter_end_month = q * 3
+            quarter_end = date(year, quarter_end_month, 1)
             if quarter_end <= today:
                 quarters.append((year, q))
     return quarters
 
 
-# ── Index Parsing ──────────────────────────────────────────────────────
+# ── Index Parsing ─────────────────────────────────────────────────────
 
 
 def fetch_form4_index(year: int, quarter: int) -> list[dict]:
+    """
+    Download and parse the EDGAR full-index company.idx for a quarter.
+    Returns list of Form 4 filing metadata dicts.
+    """
     url = f"{EDGAR_BASE_URL}/{year}/QTR{quarter}/company.idx"
     log.info(f"Fetching index: {url}")
+
     content = fetch_url(url)
     lines = content.decode("utf-8", errors="replace").splitlines()
 
+    # Skip header lines (first 10 lines are headers/separators)
     filings = []
     for line in lines[10:]:
         if len(line) < 40:
@@ -156,11 +163,13 @@ def fetch_form4_index(year: int, quarter: int) -> list[dict]:
         filing_date = line[86:98].strip()
         company_name = line[0:62].strip()
 
+        # Find filename by locating 'edgar/' — avoids fixed-width offset issues
         edgar_pos = line.find("edgar/")
         if edgar_pos == -1:
             continue
         filename = line[edgar_pos:].strip()
 
+        # Build accession number from filename
         parts = filename.replace(".txt", "").split("/")
         accession_num = parts[-1] if parts else filename
 
@@ -180,25 +189,34 @@ def fetch_form4_index(year: int, quarter: int) -> list[dict]:
     return filings
 
 
-# ── XML Parsing ────────────────────────────────────────────────────────
+# ── XML Parsing ───────────────────────────────────────────────────────
 
 
 def extract_xml_value(xml: str, tag: str) -> str | None:
     """
-    Handles both direct and nested <value> SEC EDGAR patterns:
-      Direct: <issuerName>Apple Inc.</issuerName>
-      Nested: <transactionShares><value>50000</value></transactionShares>
+    Extract value from XML tag — handles both direct and nested <value> patterns.
+
+    SEC EDGAR Form 4 XML uses two patterns:
+      Direct:  <issuerName>Apple Inc.</issuerName>
+      Nested:  <transactionShares><value>50000</value></transactionShares>
+
+    This function handles both.
     """
+    # Match the outer tag (with optional attributes)
     pattern = rf"<{tag}[^>]*>(.*?)</{tag}>"
     match = re.search(pattern, xml, re.DOTALL | re.IGNORECASE)
     if not match:
         return None
 
     inner = match.group(1).strip()
+
+    # If inner content contains a <value> child tag, extract that
     value_match = re.search(r"<value[^>]*>([^<]*)</value>", inner, re.IGNORECASE)
     if value_match:
         return value_match.group(1).strip()
 
+    # Otherwise return direct text content (strip any remaining tags)
+    # Remove any XML tags that might be present
     direct = re.sub(r"<[^>]+>", "", inner).strip()
     return direct if direct else None
 
@@ -222,12 +240,19 @@ def safe_date(value: str | None) -> date | None:
 
 
 def parse_form4_xml(xml_content: str, filing_meta: dict) -> list[dict]:
+    """
+    Parse a Form 4 XML filing into a list of transaction records.
+    One record per non-derivative transaction row.
+    """
     records = []
     ingested_at = datetime.utcnow()
 
+    # Issuer info
     issuer_cik = extract_xml_value(xml_content, "issuerCik")
     issuer_name = extract_xml_value(xml_content, "issuerName")
     issuer_ticker = extract_xml_value(xml_content, "issuerTradingSymbol")
+
+    # Reporting owner
     owner_name = extract_xml_value(xml_content, "rptOwnerName")
     is_director = extract_xml_value(xml_content, "isDirector")
     is_officer = extract_xml_value(xml_content, "isOfficer")
@@ -236,12 +261,26 @@ def parse_form4_xml(xml_content: str, filing_meta: dict) -> list[dict]:
     period = safe_date(extract_xml_value(xml_content, "periodOfReport"))
     filing_date = safe_date(filing_meta.get("filing_date"))
 
+    # Non-derivative transactions
     tx_pattern = re.compile(
         r"<nonDerivativeTransaction>(.*?)</nonDerivativeTransaction>",
         re.DOTALL | re.IGNORECASE,
     )
     for tx_match in tx_pattern.finditer(xml_content):
         tx_xml = tx_match.group(1)
+
+        security_title = extract_xml_value(tx_xml, "securityTitle")
+        tx_date = safe_date(extract_xml_value(tx_xml, "transactionDate"))
+        tx_code = extract_xml_value(tx_xml, "transactionCode")
+        tx_shares = safe_float(extract_xml_value(tx_xml, "transactionShares"))
+        price_per_share = safe_float(
+            extract_xml_value(tx_xml, "transactionPricePerShare")
+        )
+        shares_after = safe_float(
+            extract_xml_value(tx_xml, "sharesOwnedFollowingTransaction")
+        )
+        direct_indirect = extract_xml_value(tx_xml, "directOrIndirectOwnership")
+
         records.append(
             {
                 "accession_number": filing_meta["accession_number"],
@@ -258,28 +297,19 @@ def parse_form4_xml(xml_content: str, filing_meta: dict) -> list[dict]:
                 "is_officer": is_officer,
                 "is_ten_pct_owner": is_10pct,
                 "officer_title": officer_title,
-                "transaction_date": safe_date(
-                    extract_xml_value(tx_xml, "transactionDate")
-                ),
-                "transaction_code": extract_xml_value(tx_xml, "transactionCode"),
-                "transaction_shares": safe_float(
-                    extract_xml_value(tx_xml, "transactionShares")
-                ),
-                "price_per_share": safe_float(
-                    extract_xml_value(tx_xml, "transactionPricePerShare")
-                ),
-                "shares_owned_after": safe_float(
-                    extract_xml_value(tx_xml, "sharesOwnedFollowingTransaction")
-                ),
-                "direct_or_indirect": extract_xml_value(
-                    tx_xml, "directOrIndirectOwnership"
-                ),
-                "security_title": extract_xml_value(tx_xml, "securityTitle"),
+                "transaction_date": tx_date,
+                "transaction_code": tx_code,
+                "transaction_shares": tx_shares,
+                "price_per_share": price_per_share,
+                "shares_owned_after": shares_after,
+                "direct_or_indirect": direct_indirect,
+                "security_title": security_title,
                 "quarter": filing_meta["quarter"],
                 "ingested_at": ingested_at,
             }
         )
 
+    # If no non-derivative transactions found, still record the filing header
     if not records:
         records.append(
             {
@@ -312,11 +342,11 @@ def parse_form4_xml(xml_content: str, filing_meta: dict) -> list[dict]:
     return records
 
 
-# ── Thread-based Fetcher ───────────────────────────────────────────────
+# ── Filing Fetcher ────────────────────────────────────────────────────
 
 
 def fetch_and_parse_filing(filing: dict) -> list[dict]:
-    """Fetch and parse a single filing — designed to run in a thread pool."""
+    """Download a single Form 4 filing XML and parse it."""
     url = f"https://www.sec.gov/Archives/{filing['filename']}"
     try:
         content = fetch_url(url)
@@ -327,119 +357,130 @@ def fetch_and_parse_filing(filing: dict) -> list[dict]:
         return []
 
 
-def fetch_all_filings(
-    filings: list[dict], max_filings: int | None = None
-) -> list[dict]:
+# ── Spark Processing ──────────────────────────────────────────────────
+
+
+def process_quarter_with_spark(
+    spark: SparkSession,
+    filings: list[dict],
+    quarter_label: str,
+    max_filings: int | None = None,
+) -> "pyspark.sql.DataFrame":
     """
-    Fetch all filings concurrently using a thread pool.
-    Replaces Spark RDD for HTTP fetching — I/O bound work suits threads better.
+    Use Spark to process a quarter's filings in parallel.
+    Returns a DataFrame of transaction records.
     """
     if max_filings:
         filings = filings[:max_filings]
-        log.info(f"Limiting to {max_filings} filings")
+        log.info(f"Limiting to {max_filings} filings for {quarter_label}")
 
-    log.info(f"Fetching {len(filings)} filings with {MAX_WORKERS} threads...")
-    all_records = []
-    completed = 0
+    log.info(f"Processing {len(filings)} filings for {quarter_label} via Spark...")
 
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = {executor.submit(fetch_and_parse_filing, f): f for f in filings}
-        for future in as_completed(futures):
-            records = future.result()
-            all_records.extend(records)
-            completed += 1
-            if completed % 100 == 0:
-                log.info(f"  Progress: {completed}/{len(filings)} filings fetched")
+    # Distribute filings across Spark workers
+    filings_rdd = spark.sparkContext.parallelize(filings, numSlices=1)
 
-    log.info(
-        f"Fetched {len(all_records):,} transaction records from {len(filings)} filings"
-    )
-    return all_records
+    # Each worker fetches and parses its subset of filings
+    records_rdd = filings_rdd.flatMap(fetch_and_parse_filing)
 
-
-# ── Spark Processing ───────────────────────────────────────────────────
-
-
-def build_spark_dataframe(
-    spark: SparkSession, records: list[dict]
-) -> "pyspark.sql.DataFrame":
-    """
-    Convert fetched records to a Spark DataFrame with enforced schema.
-    Spark is used here for schema enforcement and Parquet writing only.
-    """
-    if not records:
+    if records_rdd.isEmpty():
+        log.warning(f"No records parsed for {quarter_label}")
         return spark.createDataFrame([], FORM4_SCHEMA)
 
-    df = spark.createDataFrame(records, schema=FORM4_SCHEMA)
-    log.info(f"Spark DataFrame created: {df.count():,} rows")
-    return df
+    # Convert to DataFrame with enforced schema
+    records_df = spark.createDataFrame(records_rdd, schema=FORM4_SCHEMA)
+
+    row_count = records_df.count()
+    log.info(f"Parsed {row_count:,} transaction records for {quarter_label}")
+
+    return records_df
 
 
-# ── GCS Writer ─────────────────────────────────────────────────────────
+# ── GCS Writer ────────────────────────────────────────────────────────
+
+
+import tempfile
+import shutil
+from google.cloud import storage as gcs
 
 
 def write_to_gcs(df, bucket_name: str, quarter_label: str) -> str:
-    """Write Parquet locally then upload to GCS (avoids Hadoop connector conflicts)."""
+    """
+    Write DataFrame as Parquet locally then upload to GCS.
+    Avoids Hadoop GCS connector Guava version conflicts.
+    """
     gcs_prefix = f"form4/quarter={quarter_label}"
     local_dir = f"/tmp/form4_quarter={quarter_label}"
 
+    # Write Parquet to local disk first
     log.info(f"Writing Parquet locally to {local_dir}...")
     df.write.mode("overwrite").parquet(local_dir)
 
+    # Upload each file to GCS
     log.info(f"Uploading to gs://{bucket_name}/{gcs_prefix}/...")
     client = gcs.Client()
     bucket = client.bucket(bucket_name)
-    uploaded = 0
 
+    uploaded = 0
     for root, dirs, files in os.walk(local_dir):
         for filename in files:
             if not filename.endswith(".parquet"):
                 continue
             local_path = os.path.join(root, filename)
-            bucket.blob(f"{gcs_prefix}/{filename}").upload_from_filename(local_path)
+            blob_name = f"{gcs_prefix}/{filename}"
+            bucket.blob(blob_name).upload_from_filename(local_path)
             uploaded += 1
 
+    # Clean up local temp files
     shutil.rmtree(local_dir, ignore_errors=True)
+
     gcs_path = f"gs://{bucket_name}/{gcs_prefix}"
     log.info(f"✅ Uploaded {uploaded} Parquet file(s) to {gcs_path}")
     return gcs_path
 
 
-# ── Smoke Test ─────────────────────────────────────────────────────────
+# ── Smoke Test ────────────────────────────────────────────────────────
 
 
 def verify_gcs_output(bucket_name: str, quarter_label: str) -> bool:
-    from google.cloud import storage
-
+    """Verify that Parquet files were written to GCS successfully."""
     client = storage.Client()
     bucket = client.bucket(bucket_name)
     prefix = f"form4/quarter={quarter_label}/"
-    blobs = list(bucket.list_blobs(prefix=prefix))
-    parquet = [b for b in blobs if b.name.endswith(".parquet")]
 
-    if not parquet:
+    blobs = list(bucket.list_blobs(prefix=prefix))
+    parquet_files = [b for b in blobs if b.name.endswith(".parquet")]
+
+    if not parquet_files:
         log.error(f"❌ No Parquet files found at gs://{bucket_name}/{prefix}")
         return False
 
-    total_size = sum(b.size for b in parquet)
+    total_size = sum(b.size for b in parquet_files)
     log.info(
-        f"✅ Smoke test passed: {len(parquet)} file(s) "
+        f"✅ Smoke test passed: {len(parquet_files)} Parquet file(s) "
         f"at gs://{bucket_name}/{prefix} "
         f"({total_size / 1024 / 1024:.2f} MB)"
     )
     return True
 
 
-# ── Main ───────────────────────────────────────────────────────────────
+# ── Main Entry Point ──────────────────────────────────────────────────
 
 
 def main():
     parser = argparse.ArgumentParser(description="SEC Form 4 Ingestion Pipeline")
-    parser.add_argument("--bucket", required=True)
-    parser.add_argument("--years", required=True)
-    parser.add_argument("--quarters", default="all")
-    parser.add_argument("--max-filings", type=int)
-    parser.add_argument("--smoke-test", action="store_true")
+    parser.add_argument("--bucket", required=True, help="GCS bucket name")
+    parser.add_argument(
+        "--years", required=True, help="Comma-separated years e.g. 2023,2024"
+    )
+    parser.add_argument(
+        "--quarters", default="all", help="Comma-separated quarters e.g. 1,2 or 'all'"
+    )
+    parser.add_argument(
+        "--max-filings", type=int, help="Limit filings per quarter (for testing)"
+    )
+    parser.add_argument(
+        "--smoke-test", action="store_true", help="Verify GCS output after write"
+    )
     args = parser.parse_args()
 
     years = [int(y.strip()) for y in args.years.split(",")]
@@ -450,13 +491,16 @@ def main():
         quarters_to_run = [(y, q) for y, q in quarters_to_run if q in allowed_qs]
 
     log.info(
-        f"Starting ingestion for {len(quarters_to_run)} quarter(s): {quarters_to_run}"
+        f"Starting SEC Form 4 ingestion for {len(quarters_to_run)} quarter(s): {quarters_to_run}"
     )
 
+    # ── Init Spark ──
     spark = (
         SparkSession.builder.appName("sec_form4_ingestion")
         .config("spark.driver.memory", "2g")
+        .config("spark.executor.memory", "2g")
         .config("spark.sql.shuffle.partitions", "8")
+        .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
         .getOrCreate()
     )
     spark.sparkContext.setLogLevel("WARN")
@@ -465,29 +509,24 @@ def main():
 
     for year, quarter in quarters_to_run:
         quarter_label = f"{year}Q{quarter}"
-        start_time = time.time()
         try:
             log.info(f"─── Processing {quarter_label} ───")
 
-            # Step 1: Fetch index
+            # Step 1: Fetch filing index
             filings = fetch_form4_index(year, quarter)
             if not filings:
-                log.warning(f"No filings found for {quarter_label}, skipping")
+                log.warning(f"No Form 4 filings found for {quarter_label}, skipping")
                 continue
 
-            # Step 2: Fetch all filings concurrently via thread pool
-            records = fetch_all_filings(filings, max_filings=args.max_filings)
+            # Step 2: Process with Spark
+            df = process_quarter_with_spark(
+                spark, filings, quarter_label, max_filings=args.max_filings
+            )
 
-            # Step 3: Build Spark DataFrame for schema enforcement + Parquet write
-            df = build_spark_dataframe(spark, records)
-
-            # Step 4: Write to GCS
+            # Step 3: Write to GCS
             write_to_gcs(df, args.bucket, quarter_label)
 
-            elapsed = time.time() - start_time
-            log.info(f"✅ {quarter_label} complete in {elapsed:.0f}s")
-
-            # Step 5: Smoke test
+            # Step 4: Smoke test
             if args.smoke_test:
                 if not verify_gcs_output(args.bucket, quarter_label):
                     failed_quarters.append(quarter_label)
