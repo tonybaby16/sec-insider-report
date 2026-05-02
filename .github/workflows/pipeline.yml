@@ -69,7 +69,6 @@ jobs:
       # ── 6. Run unit tests ──
       - name: Run unit tests
         run: pytest spark/tests/ -v --tb=short
-        if: false
 
       # ── 7. PySpark Ingestion → GCS ──
       - name: Run PySpark ingestion
@@ -93,7 +92,6 @@ jobs:
 
           echo "Running: $CMD"
           $CMD
-        if: false
 
       # ── 8. Load GCS Parquet → BigQuery RAW ──
       - name: Load GCS to BigQuery RAW
@@ -104,7 +102,6 @@ jobs:
             --bucket  $GCS_BUCKET \
             --project $PROJECT_ID \
             --quarters all
-        if: false
 
       # ── 9. Great Expectations validation (Phase 4) ──
       - name: Run data quality checks
